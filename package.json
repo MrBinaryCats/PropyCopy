@@ -1,0 +1,24 @@
+{
+  "name": "com.binarycats.propycopy",
+  "version": "1.0.0",
+  "displayName": "PropyCopy",
+  "description": "Copy Unity Serialized Properties and object and paste them to other objects",
+  "unity": "2019.1",
+  "documentationUrl": "https://example.com/",
+  "changelogUrl": "https://example.com/changelog.html",
+  "licensesUrl": "https://example.com/licensing.html",
+  "keywords": [
+    "Copy",
+    "Paste",
+    "editor",
+    "Utility"
+  ],
+  "author": {
+    "name": "BinaryCats",
+    "email": "david@binarycats.co.uk",
+    "url": "https://github.com/MrBinaryCats"
+  },
+  "dependencies": {
+    "com.unity.nuget.newtonsoft-json": "2.0.2"
+  }
+}
