@@ -152,6 +152,7 @@ public static class CopyUtil
             case SerializedPropertyType.Boolean:
                 return property.boolValue;
             case SerializedPropertyType.Integer:
+            case SerializedPropertyType.Enum:
             case SerializedPropertyType.ArraySize:
                 return property.intValue;
             case SerializedPropertyType.Float:
@@ -195,6 +196,7 @@ public static class CopyUtil
                 prop.boolValue = token.Value<bool>();
                 break;
             case SerializedPropertyType.Integer when token.Type == JTokenType.Integer:
+            case SerializedPropertyType.Enum when token.Type == JTokenType.Integer:
             case SerializedPropertyType.ArraySize when token.Type == JTokenType.Integer:
                 prop.intValue = token.Value<int>();
                 break;
