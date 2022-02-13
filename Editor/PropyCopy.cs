@@ -27,7 +27,7 @@ public static class CopyUtil
 
         //only show the enabled menu option if the clipboard is valid json and,
         //if that json has multiple entries the property must be an object
-        if (PasteComponentCheck(out var obj) && obj.Count > 1 == ShouldEnterProp(property))
+        if (PasteComponentCheck(out var obj) && obj.Count > 1 == !ShouldProcessProp(property))
             menu.AddItem(new GUIContent("Paste"), false, OnPasteProperty);
         else
             menu.AddDisabledItem(new GUIContent("Paste"), false);
@@ -133,9 +133,8 @@ public static class CopyUtil
         var obj = new JObject();
         while (property.NextVisible(true) && !SerializedProperty.EqualContents(property, endProperty))
         {
-            //skip the parent prop (e.g. Vector3) as we only care about the raw values
-            //However Object and color references are a special case as we need to pull non-visible info out
-            if (ShouldEnterProp(property))
+
+            if (!ShouldProcessProp(property))
                 continue;
 
             var path = property.propertyPath.Substring(pathStart);
@@ -145,9 +144,11 @@ public static class CopyUtil
         return obj;
     }
 
-    private static bool ShouldEnterProp(SerializedProperty property)
+    private static bool ShouldProcessProp(SerializedProperty property)
     {
-        return property.hasChildren && (property.propertyType != SerializedPropertyType.ObjectReference && property.propertyType != SerializedPropertyType.Color);
+        //skip the parent prop (e.g. Vector3) as we only care about the raw values
+        //However Object and color references are a special case as we need to pull non-visible info out
+        return !property.hasChildren || (property.propertyType == SerializedPropertyType.ObjectReference || property.propertyType == SerializedPropertyType.Color));
     }
 
     /// <summary>
