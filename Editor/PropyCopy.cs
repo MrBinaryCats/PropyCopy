@@ -36,17 +36,7 @@ public static class CopyUtil
         {
             var nameLength = _cachedProp.name.Length + 1;
 
-            var endProperty = _cachedProp.GetEndProperty().propertyPath;
-            while (_cachedProp.NextVisible(true) && _cachedProp.propertyPath != endProperty)
-            {
-                //skip the parent prop (e.g. Vector3) as we only care about the raw values
-                //However Object references are a special case as we need to pull non-visible info out
-                if (_cachedProp.hasChildren && _cachedProp.propertyType != SerializedPropertyType.ObjectReference)
-                    continue;
-
-                var path = _cachedProp.propertyPath.Substring(nameLength);
-                obj[path] = GetPropValue(_cachedProp);
-            }
+            obj = PropertyToJson(_cachedProp, _cachedProp.GetEndProperty(), nameLength);
         }
         else
             obj[_cachedProp.name] = GetPropValue(_cachedProp);
@@ -60,12 +50,7 @@ public static class CopyUtil
         var so = _cachedProp.serializedObject;
         if (_cachedProp.hasVisibleChildren)
         {
-            foreach (var kvp in obj)
-            {
-                var childProp = so.FindProperty($"{_cachedProp.name}.{kvp.Key}");
-                if (childProp == null) continue;
-                SetPropValue(childProp, kvp.Value);
-            }
+            JsonToProperty(obj, so, _cachedProp.name);
         }
         else
         {
@@ -81,20 +66,12 @@ public static class CopyUtil
     [MenuItem("CONTEXT/Component/Copy All Fields", false, 900)]
     private static void OnCopyComponent(MenuCommand command)
     {
-        var obj = new JObject();
+        JObject obj = null;
         using (var so = new SerializedObject(command.context))
         {
             var it = so.GetIterator();
             it.NextVisible(true); //skip script prop
-            while (it.NextVisible(true))
-            {
-                //skip the parent prop (e.g. Vector3) as we only care about the raw values
-                //However Object references are a special case as we need to pull non-visible info out
-                if (it.hasChildren && it.propertyType != SerializedPropertyType.ObjectReference)
-                    continue;
-
-                obj[it.propertyPath] = GetPropValue(it);
-            }
+            obj = PropertyToJson(it);
         }
 
         EditorGUIUtility.systemCopyBuffer = obj.ToString();
@@ -125,18 +102,43 @@ public static class CopyUtil
         var obj = JObject.Parse(EditorGUIUtility.systemCopyBuffer);
         using (var so = new SerializedObject(command.context))
         {
-            foreach (var kvp in obj)
-            {
-                //try to find a property with the same property path
-                var prop = so.FindProperty(kvp.Key);
-                if (prop != null)
-                {
-                    SetPropValue(prop, kvp.Value);
-                }
-            }
+            JsonToProperty(obj, so);
 
             so.ApplyModifiedProperties();
         }
+    }
+
+    private static void JsonToProperty(JObject obj, SerializedObject so, string parentPropertyName = null)
+    {
+        foreach (var kvp in obj)
+        {
+            var path = kvp.Key;
+            if (parentPropertyName != null)
+                path = $"{parentPropertyName}.{path}";
+
+            //try to find a property with the same property path
+            var prop = so.FindProperty(path);
+            if (prop == null)
+                continue;
+            SetPropValue(prop, kvp.Value);
+        }
+    }
+
+    private static JObject PropertyToJson(SerializedProperty property, SerializedProperty endProperty = null, int pathStart = 0)
+    {
+        var obj = new JObject();
+        while (property.NextVisible(true) && !SerializedProperty.EqualContents(property, endProperty))
+        {
+            //skip the parent prop (e.g. Vector3) as we only care about the raw values
+            //However Object references are a special case as we need to pull non-visible info out
+            if (property.hasChildren && property.propertyType != SerializedPropertyType.ObjectReference)
+                continue;
+
+            var path = property.propertyPath.Substring(pathStart);
+            obj[path] = GetPropValue(property);
+        }
+
+        return obj;
     }
 
     /// <summary>
