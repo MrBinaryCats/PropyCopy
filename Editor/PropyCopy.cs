@@ -2,8 +2,9 @@
 using Newtonsoft.Json.Linq;
 using UnityEditor;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
-public static class CopyUtil
+public static class PropyCopy
 {
     private const string GuidField = "guid";
     private const string InstanceIDField = "instanceID";
@@ -12,13 +13,13 @@ public static class CopyUtil
     private const string BlueComponent = "b";
     private const string AlphaComponent = "a";
 
+    private static SerializedProperty _cachedProp;
+
     [InitializeOnLoadMethod]
     private static void InitialiseCopyUtil()
     {
         EditorApplication.contextualPropertyMenu += OnPropertyContextMenu;
     }
-
-    private static SerializedProperty _cachedProp;
 
     private static void OnPropertyContextMenu(GenericMenu menu, SerializedProperty property)
     {
@@ -43,7 +44,9 @@ public static class CopyUtil
             obj = PropertyToJson(_cachedProp, _cachedProp.GetEndProperty(), nameLength);
         }
         else
+        {
             obj[_cachedProp.name] = GetPropValue(_cachedProp);
+        }
 
         if (obj.Count > 0) EditorGUIUtility.systemCopyBuffer = obj.ToString();
     }
@@ -70,7 +73,7 @@ public static class CopyUtil
     [MenuItem("CONTEXT/Component/Copy All Fields", false, 900)]
     private static void OnCopyComponent(MenuCommand command)
     {
-        JObject obj = null;
+        JObject obj;
         using (var so = new SerializedObject(command.context))
         {
             var it = so.GetIterator();
@@ -83,7 +86,10 @@ public static class CopyUtil
 
 
     [MenuItem("CONTEXT/Component/Paste All Fields", true)]
-    private static bool PasteComponentCheck(MenuCommand command) => PasteComponentCheck(out _);
+    private static bool PasteComponentCheck(MenuCommand command)
+    {
+        return PasteComponentCheck(out _);
+    }
 
     private static bool PasteComponentCheck(out JObject obj)
     {
@@ -133,7 +139,6 @@ public static class CopyUtil
         var obj = new JObject();
         while (property.NextVisible(true) && !SerializedProperty.EqualContents(property, endProperty))
         {
-
             if (!ShouldProcessProp(property))
                 continue;
 
@@ -148,11 +153,11 @@ public static class CopyUtil
     {
         //skip the parent prop (e.g. Vector3) as we only care about the raw values
         //However Object and color references are a special case as we need to pull non-visible info out
-        return !property.hasChildren || (property.propertyType == SerializedPropertyType.ObjectReference || property.propertyType == SerializedPropertyType.Color));
+        return !property.hasChildren || property.propertyType == SerializedPropertyType.ObjectReference || property.propertyType == SerializedPropertyType.Color;
     }
 
     /// <summary>
-    /// Gets the json representation out of a SerializedProperty
+    ///     Gets the json representation out of a SerializedProperty
     /// </summary>
     /// <param name="property">The property to get the value from</param>
     /// <returns>The json token for the property's value</returns>
@@ -197,7 +202,7 @@ public static class CopyUtil
                     [RedComponent] = col.r,
                     [GreenComponent] = col.g,
                     [BlueComponent] = col.b,
-                    [AlphaComponent] = col.a,
+                    [AlphaComponent] = col.a
                 };
                 return objCol;
             default:
@@ -206,7 +211,7 @@ public static class CopyUtil
     }
 
     /// <summary>
-    /// Sets the SerializedProperty value from a Json Value
+    ///     Sets the SerializedProperty value from a Json Value
     /// </summary>
     /// <param name="prop">The property to set</param>
     /// <param name="token">The value to set the property to</param>
@@ -233,7 +238,7 @@ public static class CopyUtil
                 else
                 {
                     var guid = token[GuidField].Value<string>();
-                    var asset = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(AssetDatabase.GUIDToAssetPath(guid));
+                    var asset = AssetDatabase.LoadAssetAtPath<Object>(AssetDatabase.GUIDToAssetPath(guid));
                     prop.objectReferenceValue = asset;
                     prop.objectReferenceInstanceIDValue = token[InstanceIDField]?.Value<int>() ?? 0;
                 }
