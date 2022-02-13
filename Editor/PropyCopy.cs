@@ -151,9 +151,8 @@ public static class PropyCopy
 
     private static bool ShouldProcessProp(SerializedProperty property)
     {
-        //skip the parent prop (e.g. Vector3) as we only care about the raw values
-        //However Object and color references are a special case as we need to pull non-visible info out
-        return !property.hasChildren || property.propertyType == SerializedPropertyType.ObjectReference || property.propertyType == SerializedPropertyType.Color;
+        //skip the parent prop (e.g. Vector3) as we only care about the raw values (x,y,z)
+        return !property.hasVisibleChildren;
     }
 
     /// <summary>
@@ -230,6 +229,9 @@ public static class PropyCopy
             case SerializedPropertyType.Float when token.Type == JTokenType.Float:
                 prop.floatValue = token.Value<float>();
                 break;
+            case SerializedPropertyType.String when token.Type == JTokenType.String:
+                prop.stringValue = token.Value<string>();
+                break;
             case SerializedPropertyType.ObjectReference when token.Type == JTokenType.Object:
                 if (token[GuidField] == null)
                 {
@@ -242,7 +244,6 @@ public static class PropyCopy
                     prop.objectReferenceValue = asset;
                     prop.objectReferenceInstanceIDValue = token[InstanceIDField]?.Value<int>() ?? 0;
                 }
-
                 break;
             case SerializedPropertyType.Color when token.Type == JTokenType.Object:
                 var col = new Color(token[RedComponent].Value<float>(), token[GreenComponent].Value<float>(), token[BlueComponent].Value<float>(), token[AlphaComponent].Value<float>());
