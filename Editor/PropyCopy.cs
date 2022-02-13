@@ -7,6 +7,10 @@ public static class CopyUtil
 {
     private const string GuidField = "guid";
     private const string InstanceIDField = "instanceID";
+    private const string RedComponent = "r";
+    private const string GreenComponent = "g";
+    private const string BlueComponent = "b";
+    private const string AlphaComponent = "a";
 
     [InitializeOnLoadMethod]
     private static void InitialiseCopyUtil()
@@ -23,7 +27,7 @@ public static class CopyUtil
 
         //only show the enabled menu option if the clipboard is valid json and,
         //if that json has multiple entries the property must be an object
-        if (PasteComponentCheck(out var obj) && obj.Count > 1 == (property.hasChildren && property.propertyType != SerializedPropertyType.ObjectReference))
+        if (PasteComponentCheck(out var obj) && obj.Count > 1 == ShouldEnterProp(property))
             menu.AddItem(new GUIContent("Paste"), false, OnPasteProperty);
         else
             menu.AddDisabledItem(new GUIContent("Paste"), false);
@@ -130,8 +134,8 @@ public static class CopyUtil
         while (property.NextVisible(true) && !SerializedProperty.EqualContents(property, endProperty))
         {
             //skip the parent prop (e.g. Vector3) as we only care about the raw values
-            //However Object references are a special case as we need to pull non-visible info out
-            if (property.hasChildren && property.propertyType != SerializedPropertyType.ObjectReference)
+            //However Object and color references are a special case as we need to pull non-visible info out
+            if (ShouldEnterProp(property))
                 continue;
 
             var path = property.propertyPath.Substring(pathStart);
@@ -139,6 +143,11 @@ public static class CopyUtil
         }
 
         return obj;
+    }
+
+    private static bool ShouldEnterProp(SerializedProperty property)
+    {
+        return property.hasChildren && (property.propertyType != SerializedPropertyType.ObjectReference && property.propertyType != SerializedPropertyType.Color);
     }
 
     /// <summary>
@@ -180,6 +189,16 @@ public static class CopyUtil
                 {
                     return property.objectReferenceInstanceIDValue;
                 }
+            case SerializedPropertyType.Color:
+                var col = property.colorValue;
+                var objCol = new JObject
+                {
+                    [RedComponent] = col.r,
+                    [GreenComponent] = col.g,
+                    [BlueComponent] = col.b,
+                    [AlphaComponent] = col.a,
+                };
+                return objCol;
             default:
                 throw new ArgumentException($"{property.propertyType} is not supported");
         }
@@ -218,6 +237,10 @@ public static class CopyUtil
                     prop.objectReferenceInstanceIDValue = token[InstanceIDField]?.Value<int>() ?? 0;
                 }
 
+                break;
+            case SerializedPropertyType.Color when token.Type == JTokenType.Object:
+                var col = new Color(token[RedComponent].Value<float>(), token[GreenComponent].Value<float>(), token[BlueComponent].Value<float>(), token[AlphaComponent].Value<float>());
+                prop.colorValue = col;
                 break;
             case SerializedPropertyType.ObjectReference when token.Type == JTokenType.Integer:
                 prop.objectReferenceInstanceIDValue = token.Value<int>();
